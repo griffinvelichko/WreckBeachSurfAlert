@@ -49,12 +49,11 @@ GET https://api.open-meteo.com/v1/forecast?latitude=49.2611&longitude=-123.2614&
 | Provider | Price to CA | Setup | SDK/REST | Reliability | Free Tier | Compliance | Recommendation |
 |----------|-------------|-------|----------|-------------|-----------|------------|----------------|
 | **Twilio** | $0.0075/SMS + fees | Easy | Both | 99.95% | $15 credit | A2P ready | **PRIMARY** |
-| **AWS SNS** | $0.01286/SMS | Moderate | Both | 99.9% | Free tier | Compliant | **FALLBACK** |
 | Vonage/Nexmo | $0.0074/SMS | Easy | Both | 99.9% | €2 credit | Good | Alternative |
 | MessageBird | $0.042/SMS | Easy | REST | 99% | None | Good | Expensive |
 | Telnyx | $0.004/SMS | Moderate | Both | 99.9% | $2 credit | Good | Alternative |
 
-#### Primary: Twilio
+#### Twilio (SMS Provider)
 - **Pricing**: ~$0.0075 base + carrier fees (total ~$0.01-0.02/SMS to Canada)
 - **API Endpoint**: `https://api.twilio.com/2010-04-01/Accounts/{AccountSid}/Messages.json`
 - **Sample Request**:
@@ -70,11 +69,6 @@ message = client.messages.create(
 - **Rationale**: Industry leader, excellent documentation, proven reliability, good Canadian coverage
 - **Documentation**: https://www.twilio.com/docs/sms/api
 
-#### Fallback: AWS SNS
-- **Pricing**: $0.01286/SMS to Canada
-- **Setup**: Requires AWS account and moving out of SMS sandbox for production
-- **Rationale**: Enterprise-grade reliability, integrates well with AWS ecosystem
-- **Documentation**: https://docs.aws.amazon.com/sns/latest/dg/sms_publish-to-phone.html
 
 ### 3. Geocoding Verification
 
@@ -377,7 +371,7 @@ gcloud scheduler jobs create http wind-alert-schedule \
     --uri https://wind-alert-xxxxx-uw.a.run.app/check
 ```
 
-#### Option 3: AWS Lambda + EventBridge
+#### Option 3: Lambda + EventBridge
 **Pros**: Pay-per-execution, highly available
 **Cons**: More complex setup, ~$2-5/month
 **Setup**:
@@ -550,7 +544,7 @@ curl "https://api.open-meteo.com/v1/forecast?latitude=49.2611&longitude=-123.261
 3. **Use platform secret managers**:
    - GitHub: Repository Secrets
    - GCP: Secret Manager
-   - AWS: Secrets Manager / Parameter Store
+   - Cloud: Secrets Manager / Parameter Store
 4. **Audit access** - Review who has access to secrets
 5. **Use separate keys** for dev/staging/production
 
@@ -591,7 +585,7 @@ permissions:
 | **Total (GitHub)** | **$0.04** | **$0.40** | **$2.00** |
 | | | | |
 | Alt: GCP Hosting | $5 | $5 | $5 |
-| Alt: AWS Hosting | $2 | $2 | $2 |
+| Alt: Lambda Hosting | $2 | $2 | $2 |
 | **Total (Cloud)** | **$5-7** | **$5-7** | **$7-9** |
 
 **Notes**:
@@ -604,7 +598,6 @@ permissions:
 ### Phase 1: Setup (Day 1)
 - [ ] Create GitHub repository
 - [ ] Sign up for Twilio account, get phone number
-- [ ] Sign up for backup SMS provider (AWS SNS)
 - [ ] Sign up for OpenAI account, get API key
 - [ ] Verify Wreck Beach coordinates
 - [ ] Create `.env.example` file
@@ -949,13 +942,12 @@ The OpenAI integration adds negligible cost (<$0.01/month for typical usage).
 1. Open-Meteo API Documentation: https://open-meteo.com/en/docs
 2. ECCC MSC Datamart: https://eccc-msc.github.io/open-data/msc-datamart/readme_en/
 3. Twilio SMS API: https://www.twilio.com/docs/sms/api
-4. AWS SNS Documentation: https://docs.aws.amazon.com/sns/latest/dg/sms_publish-to-phone.html
-5. GitHub Actions Schedule: https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#schedule
-6. Wind Direction Conventions: https://www.weather.gov/media/epz/wxcalc/windConversion.pdf
-7. Wreck Beach Coordinates: https://geonames.nrcan.gc.ca/
-8. Tomorrow.io API: https://docs.tomorrow.io/reference/welcome
-9. OpenWeatherMap API: https://openweathermap.org/api
-10. Python Tenacity Library: https://tenacity.readthedocs.io/
-11. OpenAI Python Library: https://github.com/openai/openai-python
-12. OpenAI API Reference: https://platform.openai.com/docs/api-reference
-13. SMS Character Limits: https://www.twilio.com/docs/glossary/what-sms-character-limit
+4. GitHub Actions Schedule: https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#schedule
+5. Wind Direction Conventions: https://www.weather.gov/media/epz/wxcalc/windConversion.pdf
+6. Wreck Beach Coordinates: https://geonames.nrcan.gc.ca/
+7. Tomorrow.io API: https://docs.tomorrow.io/reference/welcome
+8. OpenWeatherMap API: https://openweathermap.org/api
+9. Python Tenacity Library: https://tenacity.readthedocs.io/
+10. OpenAI Python Library: https://github.com/openai/openai-python
+11. OpenAI API Reference: https://platform.openai.com/docs/api-reference
+12. SMS Character Limits: https://www.twilio.com/docs/glossary/what-sms-character-limit
