@@ -49,12 +49,11 @@ GET https://api.open-meteo.com/v1/forecast?latitude=49.2611&longitude=-123.2614&
 | Provider | Price to CA | Setup | SDK/REST | Reliability | Free Tier | Compliance | Recommendation |
 |----------|-------------|-------|----------|-------------|-----------|------------|----------------|
 | **Twilio** | $0.0075/SMS + fees | Easy | Both | 99.95% | $15 credit | A2P ready | **PRIMARY** |
-| **AWS SNS** | $0.01286/SMS | Moderate | Both | 99.9% | Free tier | Compliant | **FALLBACK** |
 | Vonage/Nexmo | $0.0074/SMS | Easy | Both | 99.9% | €2 credit | Good | Alternative |
 | MessageBird | $0.042/SMS | Easy | REST | 99% | None | Good | Expensive |
 | Telnyx | $0.004/SMS | Moderate | Both | 99.9% | $2 credit | Good | Alternative |
 
-#### Primary: Twilio
+#### Twilio (SMS Provider)
 - **Pricing**: ~$0.0075 base + carrier fees (total ~$0.01-0.02/SMS to Canada)
 - **API Endpoint**: `https://api.twilio.com/2010-04-01/Accounts/{AccountSid}/Messages.json`
 - **Sample Request**:
@@ -70,11 +69,6 @@ message = client.messages.create(
 - **Rationale**: Industry leader, excellent documentation, proven reliability, good Canadian coverage
 - **Documentation**: https://www.twilio.com/docs/sms/api
 
-#### Fallback: AWS SNS
-- **Pricing**: $0.01286/SMS to Canada
-- **Setup**: Requires AWS account and moving out of SMS sandbox for production
-- **Rationale**: Enterprise-grade reliability, integrates well with AWS ecosystem
-- **Documentation**: https://docs.aws.amazon.com/sns/latest/dg/sms_publish-to-phone.html
 
 ### 3. Geocoding Verification
 
@@ -377,7 +371,7 @@ gcloud scheduler jobs create http wind-alert-schedule \
     --uri https://wind-alert-xxxxx-uw.a.run.app/check
 ```
 
-#### Option 3: AWS Lambda + EventBridge
+#### Option 3: Lambda + EventBridge
 **Pros**: Pay-per-execution, highly available
 **Cons**: More complex setup, ~$2-5/month
 **Setup**:
@@ -430,137 +424,16 @@ crontab -e
 4. Push code and workflow file
 5. Verify first scheduled run in Actions tab
 
-## Phase E — Observability, Reliability & Ops
-
-### 13. Logging Format & Metrics
-
-**Structured Logging**:
-```json
-{
-  "timestamp": "2025-01-19T15:00:00Z",
-  "level": "INFO",
-  "event": "wind_check",
-  "wind_speed_kmh": 27.3,
-  "wind_direction_deg": 315,
-  "alert_sent": true,
-  "alert_id": "SM123456",
-  "api_used": "open-meteo",
-  "response_time_ms": 245
-}
-```
-
-**Key Metrics**:
-- `wind_checks_total`: Counter of all checks
-- `alerts_sent_total`: Counter of SMS sent
-- `api_errors_total`: Counter by API provider
-- `last_wind_speed_kmh`: Gauge of latest reading
-- `last_wind_direction_deg`: Gauge of latest direction
-
-### 14. Alert Throttling & State Management
-
-**State Storage Options**:
-
-1. **GitHub Actions Artifacts** (for GitHub hosting):
-```python
-# Save state as artifact
-with open('state.json', 'w') as f:
-    json.dump(state, f)
-```
-
-2. **Redis with TTL**:
-```python
-redis_client.setex(
-    'last_alert_time',
-    timedelta(hours=12),
-    datetime.now().isoformat()
-)
-```
-
-3. **Local SQLite**:
-```sql
-CREATE TABLE alert_state (
-    id INTEGER PRIMARY KEY,
-    last_alert_time TIMESTAMP,
-    alert_count_today INTEGER,
-    last_condition TEXT
-);
-```
-
-### 15. Error Handling & Retries
-
-**Retry Strategy**:
-```python
-from tenacity import retry, stop_after_attempt, wait_exponential
-
-@retry(
-    stop=stop_after_attempt(3),
-    wait=wait_exponential(multiplier=1, min=4, max=10)
-)
-def fetch_with_retry(url, **kwargs):
-    response = requests.get(url, timeout=10, **kwargs)
-    response.raise_for_status()
-    return response.json()
-```
-
-**Error Scenarios**:
-1. **API Timeout**: Retry 3x with exponential backoff, then try fallback
-2. **Invalid Data**: Log error, skip this check cycle
-3. **SMS Failure**: Retry 3x, log failure, alert via alternate channel
-4. **State Corruption**: Reset to safe defaults, log incident
-
-### 16. Runbook
-
-**No Alerts Arriving**:
-1. Check GitHub Actions logs for execution
-2. Verify wind conditions actually meet criteria
-3. Check deduplication state (may be in cooldown)
-4. Verify API responses returning valid data
-5. Check SMS provider status page
-6. Verify phone number and credentials
-
-**Constant Alerts**:
-1. Check if deduplication is working
-2. Verify state file is being written/read
-3. Check if wind conditions are borderline (oscillating around 25 km/h)
-4. Review cooldown period setting
-5. Consider increasing threshold or cooldown
-
-**Debugging Commands**:
-```bash
-# Check last run
-gh run list --workflow=wind-alert.yml --limit=5
-
-# View logs
-gh run view <run-id> --log
-
-# Trigger manual run
-gh workflow run wind-alert.yml
-
-# Check current wind conditions
-curl "https://api.open-meteo.com/v1/forecast?latitude=49.2611&longitude=-123.2614&current=wind_speed_10m,wind_direction_10m"
-```
-
-## Phase F — Security & Cost
+## Phase E — Security & Cost
 
 ### 17. Secrets Handling
 
 **Best Practices**:
 1. **Never commit secrets** - Use .gitignore for .env files
-2. **Rotate regularly** - Quarterly rotation for API keys
-3. **Use platform secret managers**:
+2. **Use platform secret managers**:
    - GitHub: Repository Secrets
    - GCP: Secret Manager
-   - AWS: Secrets Manager / Parameter Store
-4. **Audit access** - Review who has access to secrets
-5. **Use separate keys** for dev/staging/production
-
-**Secret Rotation Procedure**:
-```bash
-# 1. Generate new credentials in provider console
-# 2. Update in secret manager
-# 3. Deploy and verify
-# 4. Revoke old credentials
-```
+   - Cloud: Secrets Manager / Parameter Store
 
 ### 18. Principle of Least Privilege
 
@@ -576,79 +449,6 @@ permissions:
   contents: read  # Only read repo
   actions: write  # For workflow dispatch
 ```
-
-### 19. Cost Estimates
-
-**Monthly Costs** (720 checks/month):
-
-| Component | Low Alert (2/month) | Moderate (20/month) | High (100/month) |
-|-----------|-------------------|-------------------|------------------|
-| Open-Meteo API | $0 | $0 | $0 |
-| Twilio SMS | $0.04 | $0.40 | $2.00 |
-| OpenAI API (gpt-4o-mini) | $0.00004 | $0.0004 | $0.002 |
-| GitHub Actions | $0 | $0 | $0 |
-| State Storage | $0 | $0 | $0 |
-| **Total (GitHub)** | **$0.04** | **$0.40** | **$2.00** |
-| | | | |
-| Alt: GCP Hosting | $5 | $5 | $5 |
-| Alt: AWS Hosting | $2 | $2 | $2 |
-| **Total (Cloud)** | **$5-7** | **$5-7** | **$7-9** |
-
-**Notes**:
-- Assumes Wreck Beach has NW winds ≥25 km/h approximately 3-15% of hours
-- SMS costs vary by carrier (shown is average)
-- Cloud hosting adds ~$2-5/month but provides better monitoring
-
-## Implementation Checklist
-
-### Phase 1: Setup (Day 1)
-- [ ] Create GitHub repository
-- [ ] Sign up for Twilio account, get phone number
-- [ ] Sign up for backup SMS provider (AWS SNS)
-- [ ] Sign up for OpenAI account, get API key
-- [ ] Verify Wreck Beach coordinates
-- [ ] Create `.env.example` file
-
-### Phase 2: Core Implementation (Day 2-3)
-- [ ] Implement wind data fetching (Open-Meteo)
-- [ ] Implement ECCC fallback
-- [ ] Write unit conversion functions
-- [ ] Implement wind direction checking
-- [ ] Create deduplication logic
-- [ ] Integrate Twilio SMS sending
-- [ ] Implement OpenAI surfer message generation
-- [ ] Add message caching logic
-- [ ] Create fallback plain text messages
-
-### Phase 3: Reliability (Day 4)
-- [ ] Add retry logic with tenacity
-- [ ] Implement comprehensive error handling
-- [ ] Add structured logging
-- [ ] Create state management system
-- [ ] Write unit tests
-- [ ] Test OpenAI API timeout handling
-- [ ] Test SMS character limit validation
-
-### Phase 4: Deployment (Day 5)
-- [ ] Create GitHub Actions workflow
-- [ ] Configure repository secrets
-- [ ] Test manual workflow dispatch
-- [ ] Verify scheduled execution
-- [ ] Document runbook procedures
-
-### Phase 5: Monitoring (Day 6)
-- [ ] Add metrics collection
-- [ ] Set up alert for job failures
-- [ ] Create dashboard (if using cloud)
-- [ ] Test all failure scenarios
-- [ ] Perform load testing
-
-### Phase 6: Documentation (Day 7)
-- [ ] Write README with setup instructions
-- [ ] Document API endpoints used
-- [ ] Create troubleshooting guide
-- [ ] Document secret rotation process
-- [ ] Final testing and go-live
 
 ## Phase G — AI-Powered Surfer Dude Messaging
 
@@ -949,13 +749,12 @@ The OpenAI integration adds negligible cost (<$0.01/month for typical usage).
 1. Open-Meteo API Documentation: https://open-meteo.com/en/docs
 2. ECCC MSC Datamart: https://eccc-msc.github.io/open-data/msc-datamart/readme_en/
 3. Twilio SMS API: https://www.twilio.com/docs/sms/api
-4. AWS SNS Documentation: https://docs.aws.amazon.com/sns/latest/dg/sms_publish-to-phone.html
-5. GitHub Actions Schedule: https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#schedule
-6. Wind Direction Conventions: https://www.weather.gov/media/epz/wxcalc/windConversion.pdf
-7. Wreck Beach Coordinates: https://geonames.nrcan.gc.ca/
-8. Tomorrow.io API: https://docs.tomorrow.io/reference/welcome
-9. OpenWeatherMap API: https://openweathermap.org/api
-10. Python Tenacity Library: https://tenacity.readthedocs.io/
-11. OpenAI Python Library: https://github.com/openai/openai-python
-12. OpenAI API Reference: https://platform.openai.com/docs/api-reference
-13. SMS Character Limits: https://www.twilio.com/docs/glossary/what-sms-character-limit
+4. GitHub Actions Schedule: https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#schedule
+5. Wind Direction Conventions: https://www.weather.gov/media/epz/wxcalc/windConversion.pdf
+6. Wreck Beach Coordinates: https://geonames.nrcan.gc.ca/
+7. Tomorrow.io API: https://docs.tomorrow.io/reference/welcome
+8. OpenWeatherMap API: https://openweathermap.org/api
+9. Python Tenacity Library: https://tenacity.readthedocs.io/
+10. OpenAI Python Library: https://github.com/openai/openai-python
+11. OpenAI API Reference: https://platform.openai.com/docs/api-reference
+12. SMS Character Limits: https://www.twilio.com/docs/glossary/what-sms-character-limit
