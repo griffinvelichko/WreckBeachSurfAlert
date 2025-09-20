@@ -33,8 +33,49 @@ def create_alert_message(wind_speed: float, wind_direction: float) -> str:
     Returns:
         Alert message string
     """
+    # Determine wind direction name
+    def get_wind_direction_name(degrees: float) -> str:
+        """Convert degrees to compass direction."""
+        degrees = degrees % 360
+        if degrees <= 11.25 or degrees >= 348.75:
+            return "N"
+        elif 11.25 < degrees <= 33.75:
+            return "NNE"
+        elif 33.75 < degrees <= 56.25:
+            return "NE"
+        elif 56.25 < degrees <= 78.75:
+            return "ENE"
+        elif 78.75 < degrees <= 101.25:
+            return "E"
+        elif 101.25 < degrees <= 123.75:
+            return "ESE"
+        elif 123.75 < degrees <= 146.25:
+            return "SE"
+        elif 146.25 < degrees <= 168.75:
+            return "SSE"
+        elif 168.75 < degrees <= 191.25:
+            return "S"
+        elif 191.25 < degrees <= 213.75:
+            return "SSW"
+        elif 213.75 < degrees <= 236.25:
+            return "SW"
+        elif 236.25 < degrees <= 258.75:
+            return "WSW"
+        elif 258.75 < degrees <= 281.25:
+            return "W"
+        elif 281.25 < degrees <= 303.75:
+            return "WNW"
+        elif 303.75 < degrees <= 326.25:
+            return "NW"
+        elif 326.25 < degrees <= 348.75:
+            return "NNW"
+        else:
+            return "?"
+
+    direction_name = get_wind_direction_name(wind_direction)
+
     # For now, simple message. OpenAI integration will be added in Phase G
-    return f"🌊 NW wind {wind_speed:.0f} km/h at Wreck Beach! Perfect conditions for windsurfing."
+    return f"🌊 {direction_name} wind {wind_speed:.0f} km/h at Wreck Beach! Perfect conditions for windsurfing."
 
 def main(force_alert: bool = False,
          test_wind_speed: Optional[float] = None,
