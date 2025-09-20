@@ -2,9 +2,16 @@
 name: Wreck Beach Wind Alert
 
 on:
-  schedule:
-    - cron: '0,30 * * * *'  # Every 30 minutes (at minute 0 and 30)
-  # workflow_dispatch:  # Manual trigger for testing
+  # Schedule removed - using Google Cloud Scheduler instead
+  # schedule:
+  #   - cron: '0,30 * * * *'  # Every 30 minutes (at minute 0 and 30)
+  workflow_dispatch:  # Triggered by Google Cloud Scheduler and manual testing
+    inputs:
+      trigger_source:
+        description: 'Source of the trigger'
+        required: false
+        default: 'manual'
+        type: string
 
 jobs:
   check-wind:
