@@ -37,7 +37,7 @@ jobs:
           WRECK_BEACH_LON: '-123.2614'
           STATE_FILE_PATH: '/tmp/wind_alert_state.json'
 
-      # Upload state for next run
+      # Upload state for next run (only if file exists)
       - name: Upload state artifact
         uses: actions/upload-artifact@v4
         if: always()
@@ -45,3 +45,4 @@ jobs:
           name: wind-alert-state
           path: /tmp/wind_alert_state.json
           retention-days: 1
+          if-no-files-found: ignore
