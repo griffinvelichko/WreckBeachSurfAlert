@@ -1,0 +1,47 @@
+# .github/workflows/wind-alert.yml
+name: Wreck Beach Wind Alert
+
+on:
+  schedule:
+    - cron: '0,30 * * * *'  # Every 30 minutes (at minute 0 and 30)
+  workflow_dispatch:  # Manual trigger for testing
+
+jobs:
+  check-wind:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      # Download previous state if it exists
+      - name: Download state artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: wind-alert-state
+          path: /tmp
+        continue-on-error: true
+
+      - run: pip install -r requirements.txt
+
+      - run: python wind_alert.py
+        env:
+          TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
+          TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
+          TWILIO_PHONE_FROM: ${{ secrets.TWILIO_PHONE_FROM }}
+          ALERT_PHONE_TO: ${{ secrets.ALERT_PHONE_TO }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          WRECK_BEACH_LAT: '49.2611'
+          WRECK_BEACH_LON: '-123.2614'
+          STATE_FILE_PATH: '/tmp/wind_alert_state.json'
+
+      # Upload state for next run
+      - name: Upload state artifact
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: wind-alert-state
+          path: /tmp/wind_alert_state.json
+          retention-days: 1
