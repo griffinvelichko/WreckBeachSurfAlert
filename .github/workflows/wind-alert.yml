@@ -4,7 +4,7 @@ name: Wreck Beach Wind Alert
 on:
   schedule:
     - cron: '0,30 * * * *'  # Every 30 minutes (at minute 0 and 30)
-  # workflow_dispatch:  # Manual trigger for testing
+  workflow_dispatch:  # Manual trigger for testing
 
 jobs:
   check-wind:
