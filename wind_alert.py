@@ -18,64 +18,11 @@ from src.conditions import check_alert_condition
 from src.state_manager import should_send_alert, update_state
 from src.sms_sender import send_sms
 from src.config import DRY_RUN
+from src.message_generator import generate_alert_message
 
 # Setup logging
 log = setup_logging()
 
-def create_alert_message(wind_speed: float, wind_direction: float) -> str:
-    """
-    Create a plain text alert message.
-
-    Args:
-        wind_speed: Wind speed in km/h
-        wind_direction: Wind direction in degrees
-
-    Returns:
-        Alert message string
-    """
-    # Determine wind direction name
-    def get_wind_direction_name(degrees: float) -> str:
-        """Convert degrees to compass direction."""
-        degrees = degrees % 360
-        if degrees <= 11.25 or degrees >= 348.75:
-            return "N"
-        elif 11.25 < degrees <= 33.75:
-            return "NNE"
-        elif 33.75 < degrees <= 56.25:
-            return "NE"
-        elif 56.25 < degrees <= 78.75:
-            return "ENE"
-        elif 78.75 < degrees <= 101.25:
-            return "E"
-        elif 101.25 < degrees <= 123.75:
-            return "ESE"
-        elif 123.75 < degrees <= 146.25:
-            return "SE"
-        elif 146.25 < degrees <= 168.75:
-            return "SSE"
-        elif 168.75 < degrees <= 191.25:
-            return "S"
-        elif 191.25 < degrees <= 213.75:
-            return "SSW"
-        elif 213.75 < degrees <= 236.25:
-            return "SW"
-        elif 236.25 < degrees <= 258.75:
-            return "WSW"
-        elif 258.75 < degrees <= 281.25:
-            return "W"
-        elif 281.25 < degrees <= 303.75:
-            return "WNW"
-        elif 303.75 < degrees <= 326.25:
-            return "NW"
-        elif 326.25 < degrees <= 348.75:
-            return "NNW"
-        else:
-            return "?"
-
-    direction_name = get_wind_direction_name(wind_direction)
-
-    # For now, simple message. OpenAI integration will be added in Phase G
-    return f"🌊 {direction_name} wind {wind_speed:.0f} km/h at Wreck Beach! Perfect conditions for windsurfing."
 
 def main(force_alert: bool = False,
          test_wind_speed: Optional[float] = None,
@@ -130,8 +77,8 @@ def main(force_alert: bool = False,
             if force_alert or should_send_alert():
                 log.info("Sending alert...")
 
-                # Create message
-                message = create_alert_message(wind_speed, wind_direction)
+                # Generate message (with AI or fallback)
+                message = generate_alert_message(wind_speed, wind_direction)
 
                 # Send SMS
                 message_sid = send_sms(message)
