@@ -14,7 +14,7 @@ def is_northwest(degrees: float) -> bool:
 
 def is_good_wind_direction(degrees: float) -> bool:
     """
-    Check if wind direction is good for windsurfing/kitesurfing at Wreck Beach.
+    Check if wind direction is good for surfing at Wreck Beach.
     Good directions: North (N), Northwest (NW), and West (W) with some flexibility.
 
     Using wider ranges for better coverage:

@@ -1,6 +1,6 @@
 # Wreck Beach Wind Alert System
 
-Automated wind monitoring system for Wreck Beach, Vancouver, BC. Sends SMS alerts when north-westerly winds exceed 25 km/h.
+Automated wind monitoring system for Wreck Beach, Vancouver, BC. Sends SMS alerts when north-westerly winds exceed 35 km/h.
 
 ## Features
 - Monitors wind conditions every 60 minutes
@@ -69,7 +69,7 @@ The system is designed to run on GitHub Actions (free tier). See `.github/workfl
 ## Wind Criteria
 
 - **Direction**: North-westerly (292.5° to 337.5°)
-- **Speed**: ≥ 25 km/h
+- **Speed**: ≥ 35 km/h
 - **Location**: Wreck Beach (49.2611°N, 123.2614°W)
 
 ## Cost Estimate
